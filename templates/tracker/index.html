@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <title>Utafutaji wa Simu Iliyopotea</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; text-align: center; padding: 50px; }
+        .box { background: white; padding: 20px; border-radius: 8px; display: inline-block; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 80%; max-width: 500px; }
+        input[type="text"] { padding: 10px; width: 60%; margin-right: 10px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .error { color: red; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Utafutaji wa Simu Iliyopotea</h2>
+        
+        {% if query %}
+            {% if location %}
+                <div style="color: #007bff; margin-top: 20px; text-align: left;">
+                    <h3>Taarifa za Kifaa: {{ location.device }}</h3>
+                    <hr>
+                    <p><strong>Taifa:</strong> {{ location.taifadefault|default:"Haijawekwa" }}</p>
+                    <p><strong>Mkoa:</strong> {{ location.mkoadefault|default:"Haijawekwa" }}</p>
+                    <p><strong>Wilaya:</strong> {{ location.wilayadefault|default:"Haijawekwa" }}</p>
+                    <p><strong>Kata:</strong> {{ location.katadefault|default:"Haijawekwa" }}</p>
+                    <p><strong>Mtaa:</strong> {{ location.mtaadefault|default:"Haijawekwa" }}</p>
+                    <hr>
+                    <p><small><strong>Latitude:</strong> {{ location.latitude }}</small></p>
+                    <p><small><strong>Longitude:</strong> {{ location.longitude }}</small></p>
+                    <p><small><strong>Mwisho Kuonekana:</strong> {{ location.timestamp }}</small></p>
+                </div>
+            {% else %}
+                <div class="error">
+                    <p>Hakuna taarifa zilizopatikanwa kwa kifaa chenye jina "<strong>{{ query }}</strong>". Hakikisha kimeshatuma data.</p>
+                </div>
+            {% endif %}
+        {% else %}
+            <form method="GET">
+                <input type="text" name="device_name" value="{{ query }}" placeholder="Weka jina la kifaa (mf. Simu_Ya_Juma)" required>
+                <button type="submit">Tafuta</button>
+            </form>
+        {% endif %}
+
+        <!-- Sehemu ya kusoma na kutuma eneo (Geolocation JavaScript) -->
+        <div id="status" style="margin-top: 20px; color: gray; font-size: 14px;">Inasoma eneo la kifaa na kulihifadhi...</div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const statusDiv = document.getElementById("status");
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    // Inachukua jina la kifaa kutoka kwenye URL kama lipo
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const deviceName = urlParams.get('device_name') || "Kifaa_Changu";
+
+                    fetch('/api/location/update/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            latitude: lat,
+                            longitude: lon,
+                            device_name: deviceName
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        statusDiv.innerHTML = "Eneo limesomwa na kutunzwa kwa mafanikio!";
+                        statusDiv.style.color = "green";
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        statusDiv.innerHTML = "Imeshindikana kutuma.";
+                        statusDiv.style.color = "red";
+                    });
+
+                }, function(error) {
+                    statusDiv.innerHTML = "Imeshindikana kusoma eneo (Ruhusa imekataliwa).";
+                    statusDiv.style.color = "red";
+                });
+            } else {
+                statusDiv.innerHTML = "Kivinjari chako hakitumii huduma ya eneo (Geolocation).";
+                statusDiv.style.color = "red";
+            }
+        });
+    </script>
+</body>
+</html>
